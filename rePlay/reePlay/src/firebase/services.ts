@@ -64,7 +64,18 @@ export const addInstructor = async (instructor: Instructor): Promise<boolean> =>
 export const updateInstructor = async (id: string, instructor: Instructor): Promise<boolean> => {
   try {
     const docRef = doc(db, 'instructors', id);
-    await updateDoc(docRef, { ...instructor });
+    
+    // 문서가 존재하는지 먼저 확인
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      // 문서가 존재하면 업데이트
+      await updateDoc(docRef, { ...instructor });
+    } else {
+      // 문서가 존재하지 않으면 새로 생성
+      await setDoc(docRef, { ...instructor });
+    }
+    
     return true;
   } catch (error) {
     console.error('Error updating instructor:', error);
@@ -114,7 +125,18 @@ export const addClass = async (classItem: Class): Promise<boolean> => {
 export const updateClass = async (id: string, classItem: Class): Promise<boolean> => {
   try {
     const docRef = doc(db, 'classes', id);
-    await updateDoc(docRef, { ...classItem });
+    
+    // 문서가 존재하는지 먼저 확인
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      // 문서가 존재하면 업데이트
+      await updateDoc(docRef, { ...classItem });
+    } else {
+      // 문서가 존재하지 않으면 새로 생성
+      await setDoc(docRef, { ...classItem });
+    }
+    
     return true;
   } catch (error) {
     console.error('Error updating class:', error);

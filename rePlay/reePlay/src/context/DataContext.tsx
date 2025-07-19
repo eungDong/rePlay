@@ -99,8 +99,13 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     }
   };
 
-  // 컴포넌트 마운트 시 데이터 로드
+  // 컴포넌트 마운트 시 데이터 로드 및 localStorage 정리
   useEffect(() => {
+    // localStorage의 기존 데이터 정리
+    localStorage.removeItem('organization');
+    localStorage.removeItem('instructors');
+    localStorage.removeItem('classes');
+    
     loadData();
   }, []);
 
