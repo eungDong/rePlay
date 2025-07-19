@@ -79,16 +79,6 @@ const ErrorMessage = styled.div`
   text-align: center;
 `;
 
-const InfoMessage = styled.div`
-  background: #f39c12;
-  color: white;
-  padding: 1rem;
-  border-radius: 5px;
-  margin-bottom: 1rem;
-  text-align: center;
-  font-size: 0.9rem;
-`;
-
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
