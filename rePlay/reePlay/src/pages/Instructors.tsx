@@ -521,7 +521,10 @@ const Instructors: React.FC = () => {
                     <SpecialtyTag key={index}>{specialty}</SpecialtyTag>
                   ))}
                 </Specialties>
-                <Experience>{instructor.experience}</Experience>
+                <div style={{ marginTop: '1rem' }}>
+                  <h4 style={{ color: '#2c3e50', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>이력</h4>
+                  <Experience style={{ whiteSpace: 'pre-wrap' }}>{instructor.experience}</Experience>
+                </div>
                 {isAdmin && (
                   <div>
                     <EditButton onClick={(e) => {

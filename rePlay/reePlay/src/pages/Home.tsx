@@ -480,7 +480,7 @@ const Home: React.FC = () => {
     <Container>
       <Hero>
         <Title>{organization.name}</Title>
-        <Subtitle>{organization.organizationDescription || organization.description}</Subtitle>
+        <Subtitle>{organization.organizationDescription || ''}</Subtitle>
       </Hero>
 
       <Section>

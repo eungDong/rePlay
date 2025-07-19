@@ -113,9 +113,6 @@ const Login: React.FC = () => {
       <LoginForm onSubmit={handleSubmit}>
         <Title>로그인</Title>
         
-        <InfoMessage>
-          관리자 계정: admin@fitness.com / admin123
-        </InfoMessage>
         
         {error && <ErrorMessage>{error}</ErrorMessage>}
         

@@ -36,14 +36,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(false);
   }, []);
 
+  // 간단한 해시 함수 (실제 운영환경에서는 bcrypt 등 사용 권장)
+  const simpleHash = (str: string): string => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // 32bit integer로 변환
+    }
+    return Math.abs(hash).toString(16);
+  };
+
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     
-    if (email === 'admin@fitness.com' && password === 'admin123') {
+    const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'admin@replay.com';
+    const adminPasswordHash = import.meta.env.VITE_ADMIN_PASSWORD_HASH || '3c4ebb9a';
+    
+    if (email === adminEmail && simpleHash(password) === adminPasswordHash) {
       const adminUser: User = {
         id: '1',
         name: 'Administrator',
-        email: 'admin@fitness.com',
+        email: adminEmail,
         role: 'admin'
       };
       setUser(adminUser);

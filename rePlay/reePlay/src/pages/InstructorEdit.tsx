@@ -291,8 +291,9 @@ const InstructorEdit: React.FC = () => {
       return;
     }
 
+
     if (!formData.bio.trim()) {
-      setError('강사 소개를 입력해주세요.');
+      setError('소개를 입력해주세요.');
       return;
     }
 
@@ -374,14 +375,15 @@ const InstructorEdit: React.FC = () => {
             />
           </FormGroup>
 
+
           <FormGroup>
-            <Label htmlFor="bio">강사 소개 *</Label>
+            <Label htmlFor="bio">소개 *</Label>
             <TextArea
               id="bio"
               name="bio"
               value={formData.bio}
               onChange={handleInputChange}
-              placeholder="강사에 대한 상세한 소개를 입력하세요"
+              placeholder="강사의 간단한 소개를 입력하세요"
               required
             />
           </FormGroup>
@@ -425,13 +427,12 @@ const InstructorEdit: React.FC = () => {
 
           <FormGroup>
             <Label htmlFor="experience">이력 *</Label>
-            <Input
-              type="text"
+            <TextArea
               id="experience"
               name="experience"
               value={formData.experience}
               onChange={handleInputChange}
-              placeholder="이력을 입력하세요"
+              placeholder="이력을 입력하세요&#10;예: 2020-2023 ABC 피트니스 센터 요가 강사&#10;2018-2020 XYZ 스튜디오 필라테스 강사"
               required
             />
           </FormGroup>

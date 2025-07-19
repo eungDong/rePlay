@@ -257,7 +257,10 @@ const InstructorDetail: React.FC = () => {
         </ProfileImage>
         <ProfileInfo>
           <InstructorName>{instructor.name} 강사님</InstructorName>
-          <Experience>{instructor.experience}</Experience>
+          <div style={{ marginBottom: '1rem' }}>
+            <h3 style={{ color: 'rgba(255,255,255,0.9)', fontSize: '1.1rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>이력</h3>
+            <Experience style={{ whiteSpace: 'pre-wrap' }}>{instructor.experience}</Experience>
+          </div>
           <SpecialtiesContainer>
             {instructor.specialties.map((specialty, index) => (
               <SpecialtyTag key={index}>{specialty}</SpecialtyTag>
@@ -266,13 +269,12 @@ const InstructorDetail: React.FC = () => {
         </ProfileInfo>
       </ProfileHeader>
 
-      <ContentSection>
-        <SectionTitle>강사 소개</SectionTitle>
-        <Bio>{instructor.bio}</Bio>
-        {instructor.detailedDescription && (
+      {instructor.detailedDescription && (
+        <ContentSection>
+          <SectionTitle>강사 소개</SectionTitle>
           <Bio style={{ whiteSpace: 'pre-wrap' }}>{instructor.detailedDescription}</Bio>
-        )}
-      </ContentSection>
+        </ContentSection>
+      )}
 
       {instructor.images && instructor.images.length > 0 && (
         <ContentSection>

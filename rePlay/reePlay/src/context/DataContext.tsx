@@ -42,13 +42,13 @@ interface DataProviderProps {
 
 // 기본 데이터
 const defaultOrganization: Organization = {
-  name: "re: Play",
-  description: "건강한 삶을 위한 최고의 운동 프로그램을 제공하는 전문 피트니스 기관입니다.",
-  history: "2015년 설립 이래 8년간 수많은 회원들의 건강한 변화를 함께해왔습니다. 전문 강사진과 체계적인 프로그램으로 개인별 맞춤 운동을 제공하고 있습니다.",
+  name: "",
+  description: "",
+  history: "",
   contact: {
-    phone: '02-1234-5678',
-    email: 'info@replay-fitness.com',
-    address: '서울시 강남구 테헤란로 123'
+    phone: '',
+    email: '',
+    address: ''
   }
 };
 
