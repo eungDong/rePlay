@@ -1,29 +1,44 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { Instructor, Class, Organization } from '../types';
+import {
+  getOrganization as getOrganizationFromFirebase,
+  updateOrganization as updateOrganizationInFirebase,
+  getInstructors as getInstructorsFromFirebase,
+  addInstructor as addInstructorToFirebase,
+  updateInstructor as updateInstructorInFirebase,
+  deleteInstructor as deleteInstructorFromFirebase,
+  getClasses as getClassesFromFirebase,
+  addClass as addClassToFirebase,
+  updateClass as updateClassInFirebase,
+  deleteClass as deleteClassFromFirebase
+} from '../firebase/services';
 
 interface DataContextType {
   // Organization data
   organization: Organization;
-  updateOrganization: (org: Organization) => void;
+  updateOrganization: (org: Organization) => Promise<void>;
   
   // Instructors data
   instructors: Instructor[];
-  addInstructor: (instructor: Instructor) => void;
-  updateInstructor: (id: string, instructor: Instructor) => void;
-  deleteInstructor: (id: string) => void;
+  addInstructor: (instructor: Instructor) => Promise<void>;
+  updateInstructor: (id: string, instructor: Instructor) => Promise<void>;
+  deleteInstructor: (id: string) => Promise<void>;
   
   // Classes data
   classes: Class[];
-  addClass: (classItem: Class) => void;
-  updateClass: (id: string, classItem: Class) => void;
-  deleteClass: (id: string) => void;
+  addClass: (classItem: Class) => Promise<void>;
+  updateClass: (id: string, classItem: Class) => Promise<void>;
+  deleteClass: (id: string) => Promise<void>;
   
   // Class schedule dates
   classSchedule: Date[];
   
-  // localStorage 초기화 (개발용)
-  clearAllData: () => void;
+  // Loading states
+  isLoading: boolean;
+  
+  // 데이터 새로고침
+  refreshData: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -52,110 +67,100 @@ const defaultOrganization: Organization = {
   }
 };
 
-// localStorage에서 데이터 가져오기 또는 기본값 사용
-const getStoredData = <T extends any>(key: string, defaultValue: T): T => {
-  try {
-    const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : defaultValue;
-  } catch {
-    return defaultValue;
-  }
-};
-
-// localStorage에 데이터 저장
-const setStoredData = <T extends any>(key: string, data: T): void => {
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-  } catch (error) {
-    console.error('Failed to save to localStorage:', error);
-  }
-};
-
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
-  const [organization, setOrganization] = useState<Organization>(() => 
-    getStoredData('organization', defaultOrganization)
-  );
-
-  const defaultInstructors: Instructor[] = [];
-
-  const [instructors, setInstructors] = useState<Instructor[]>(() => 
-    getStoredData('instructors', defaultInstructors)
-  );
-
-  const defaultClasses: Class[] = [];
-
-  // Date 객체를 제대로 복원하기 위한 특별한 처리
-  const getStoredClasses = (): Class[] => {
-    try {
-      const stored = localStorage.getItem('classes');
-      if (stored) {
-        const parsedClasses = JSON.parse(stored);
-        // Date 문자열을 Date 객체로 변환
-        return parsedClasses.map((cls: any) => ({
-          ...cls,
-          date: new Date(cls.date)
-        }));
-      }
-    } catch {
-      // 에러 발생시 기본값 반환
-    }
-    return defaultClasses;
-  };
-
-  const [classes, setClasses] = useState<Class[]>(() => getStoredClasses());
+  const [organization, setOrganization] = useState<Organization>(defaultOrganization);
+  const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Generate class schedule from classes
   const classSchedule = classes.map(cls => cls.date);
 
-  const updateOrganization = (org: Organization) => {
-    setOrganization(org);
-    setStoredData('organization', org);
+  // Firebase에서 모든 데이터 로드
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      // 병렬로 데이터 로드
+      const [orgData, instructorsData, classesData] = await Promise.all([
+        getOrganizationFromFirebase(),
+        getInstructorsFromFirebase(),
+        getClassesFromFirebase()
+      ]);
+
+      if (orgData) {
+        setOrganization(orgData);
+      }
+      setInstructors(instructorsData);
+      setClasses(classesData);
+    } catch (error) {
+      console.error('Error loading data from Firebase:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const addInstructor = (instructor: Instructor) => {
-    const newInstructors = [...instructors, instructor];
-    setInstructors(newInstructors);
-    setStoredData('instructors', newInstructors);
+  // 컴포넌트 마운트 시 데이터 로드
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const updateOrganization = async (org: Organization) => {
+    const success = await updateOrganizationInFirebase(org);
+    if (success) {
+      setOrganization(org);
+    }
   };
 
-  const updateInstructor = (id: string, instructor: Instructor) => {
-    const updatedInstructors = instructors.map(inst => inst.id === id ? instructor : inst);
-    setInstructors(updatedInstructors);
-    setStoredData('instructors', updatedInstructors);
+  const addInstructor = async (instructor: Instructor) => {
+    const success = await addInstructorToFirebase(instructor);
+    if (success) {
+      // 데이터 새로고침하여 최신 상태 반영
+      const updatedInstructors = await getInstructorsFromFirebase();
+      setInstructors(updatedInstructors);
+    }
   };
 
-  const deleteInstructor = (id: string) => {
-    const filteredInstructors = instructors.filter(inst => inst.id !== id);
-    setInstructors(filteredInstructors);
-    setStoredData('instructors', filteredInstructors);
+  const updateInstructor = async (id: string, instructor: Instructor) => {
+    const success = await updateInstructorInFirebase(id, instructor);
+    if (success) {
+      const updatedInstructors = instructors.map(inst => inst.id === id ? { ...instructor, id } : inst);
+      setInstructors(updatedInstructors);
+    }
   };
 
-  const addClass = (classItem: Class) => {
-    const newClasses = [...classes, classItem];
-    setClasses(newClasses);
-    setStoredData('classes', newClasses);
+  const deleteInstructor = async (id: string) => {
+    const success = await deleteInstructorFromFirebase(id);
+    if (success) {
+      setInstructors(instructors.filter(inst => inst.id !== id));
+    }
   };
 
-  const updateClass = (id: string, classItem: Class) => {
-    const updatedClasses = classes.map(cls => cls.id === id ? classItem : cls);
-    setClasses(updatedClasses);
-    setStoredData('classes', updatedClasses);
+  const addClass = async (classItem: Class) => {
+    const success = await addClassToFirebase(classItem);
+    if (success) {
+      // 데이터 새로고침하여 최신 상태 반영
+      const updatedClasses = await getClassesFromFirebase();
+      setClasses(updatedClasses);
+    }
   };
 
-  const deleteClass = (id: string) => {
-    const filteredClasses = classes.filter(cls => cls.id !== id);
-    setClasses(filteredClasses);
-    setStoredData('classes', filteredClasses);
+  const updateClass = async (id: string, classItem: Class) => {
+    const success = await updateClassInFirebase(id, classItem);
+    if (success) {
+      const updatedClasses = classes.map(cls => cls.id === id ? { ...classItem, id } : cls);
+      setClasses(updatedClasses);
+    }
   };
 
-  // localStorage 전체 데이터 초기화 (개발용)
-  const clearAllData = () => {
-    localStorage.removeItem('organization');
-    localStorage.removeItem('instructors');
-    localStorage.removeItem('classes');
-    setOrganization(defaultOrganization);
-    setInstructors(defaultInstructors);
-    setClasses(defaultClasses);
+  const deleteClass = async (id: string) => {
+    const success = await deleteClassFromFirebase(id);
+    if (success) {
+      setClasses(classes.filter(cls => cls.id !== id));
+    }
+  };
+
+  const refreshData = async () => {
+    await loadData();
   };
 
   const value = {
@@ -170,7 +175,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     updateClass,
     deleteClass,
     classSchedule,
-    clearAllData
+    isLoading,
+    refreshData
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
