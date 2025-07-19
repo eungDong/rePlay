@@ -91,6 +91,8 @@ const InfoCard = styled.div`
   
   p {
     line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
     
     @media (max-width: 768px) {
       font-size: 0.95rem;

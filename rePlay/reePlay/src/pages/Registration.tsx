@@ -109,6 +109,8 @@ const ClassDescription = styled.p`
   color: #666;
   line-height: 1.6;
   margin-bottom: 1rem;
+  white-space: pre-wrap;
+  word-wrap: break-word;
   
   @media (max-width: 768px) {
     font-size: 0.9rem;

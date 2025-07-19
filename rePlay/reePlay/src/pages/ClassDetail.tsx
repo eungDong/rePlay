@@ -147,6 +147,8 @@ const Description = styled.div`
   color: #555;
   font-size: 1.1rem;
   margin-bottom: 2rem;
+  white-space: pre-wrap;
+  word-wrap: break-word;
   
   @media (max-width: 768px) {
     font-size: 1rem;

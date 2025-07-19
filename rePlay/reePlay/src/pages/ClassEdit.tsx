@@ -327,7 +327,7 @@ const ClassEdit: React.FC = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -371,24 +371,29 @@ const ClassEdit: React.FC = () => {
       return;
     }
 
-    // 업데이트된 클래스 정보
-    const updatedClass: Class = {
-      ...currentClass,
-      title: formData.title.trim(),
-      description: formData.description.trim(),
-      detailedDescription: formData.detailedDescription.trim(),
-      instructor: formData.instructor.trim(),
-      date: new Date(`${formData.date}T${formData.time}`),
-      duration: duration,
-      maxParticipants: maxParticipants,
-      location: formData.location.trim(),
-      googleFormUrl: formData.googleFormUrl.trim(),
-      images: formData.images
-    };
+    try {
+      // 업데이트된 클래스 정보
+      const updatedClass: Class = {
+        ...currentClass,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        detailedDescription: formData.detailedDescription.trim(),
+        instructor: formData.instructor.trim(),
+        date: new Date(`${formData.date}T${formData.time}`),
+        duration: duration,
+        maxParticipants: maxParticipants,
+        location: formData.location.trim(),
+        googleFormUrl: formData.googleFormUrl.trim(),
+        images: formData.images
+      };
 
-    updateClass(id!, updatedClass);
-    alert('클래스 정보가 수정되었습니다.');
-    navigate('/registration');
+      await updateClass(id!, updatedClass);
+      alert('클래스 정보가 수정되었습니다.');
+      navigate('/registration');
+    } catch (error) {
+      console.error('클래스 수정 오류:', error);
+      setError('클래스 수정 중 오류가 발생했습니다. 다시 시도해주세요.');
+    }
   };
 
   const classToEdit = classes.find(cls => cls.id === id);
