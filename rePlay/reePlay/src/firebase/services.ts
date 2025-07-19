@@ -53,7 +53,7 @@ export const getInstructors = async (): Promise<Instructor[]> => {
 
 export const addInstructor = async (instructor: Instructor): Promise<boolean> => {
   try {
-    await addDoc(collection(db, 'instructors'), instructor);
+    await addDoc(collection(db, 'instructors'), { ...instructor });
     return true;
   } catch (error) {
     console.error('Error adding instructor:', error);
@@ -64,7 +64,7 @@ export const addInstructor = async (instructor: Instructor): Promise<boolean> =>
 export const updateInstructor = async (id: string, instructor: Instructor): Promise<boolean> => {
   try {
     const docRef = doc(db, 'instructors', id);
-    await updateDoc(docRef, instructor);
+    await updateDoc(docRef, { ...instructor });
     return true;
   } catch (error) {
     console.error('Error updating instructor:', error);
@@ -103,7 +103,7 @@ export const getClasses = async (): Promise<Class[]> => {
 
 export const addClass = async (classItem: Class): Promise<boolean> => {
   try {
-    await addDoc(collection(db, 'classes'), classItem);
+    await addDoc(collection(db, 'classes'), { ...classItem });
     return true;
   } catch (error) {
     console.error('Error adding class:', error);
@@ -114,7 +114,7 @@ export const addClass = async (classItem: Class): Promise<boolean> => {
 export const updateClass = async (id: string, classItem: Class): Promise<boolean> => {
   try {
     const docRef = doc(db, 'classes', id);
-    await updateDoc(docRef, classItem);
+    await updateDoc(docRef, { ...classItem });
     return true;
   } catch (error) {
     console.error('Error updating class:', error);
