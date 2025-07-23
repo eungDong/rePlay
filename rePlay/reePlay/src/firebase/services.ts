@@ -53,7 +53,8 @@ export const getInstructors = async (): Promise<Instructor[]> => {
 
 export const addInstructor = async (instructor: Instructor): Promise<boolean> => {
   try {
-    await addDoc(collection(db, 'instructors'), { ...instructor });
+    // instructor.id를 문서 ID로 사용하여 저장
+    await setDoc(doc(db, 'instructors', instructor.id), { ...instructor });
     return true;
   } catch (error) {
     console.error('Error adding instructor:', error);
