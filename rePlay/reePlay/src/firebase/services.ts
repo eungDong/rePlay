@@ -146,10 +146,13 @@ export const updateClass = async (id: string, classItem: Class): Promise<boolean
 
 export const deleteClass = async (id: string): Promise<boolean> => {
   try {
+    console.log('Attempting to delete class with ID:', id);
     await deleteDoc(doc(db, 'classes', id));
+    console.log('Class deleted successfully from Firebase');
     return true;
   } catch (error) {
     console.error('Error deleting class:', error);
+    console.error('Failed to delete class ID:', id);
     return false;
   }
 };
