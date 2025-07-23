@@ -114,7 +114,8 @@ export const getClasses = async (): Promise<Class[]> => {
 
 export const addClass = async (classItem: Class): Promise<boolean> => {
   try {
-    await addDoc(collection(db, 'classes'), { ...classItem });
+    // classItem.id를 문서 ID로 사용하여 저장
+    await setDoc(doc(db, 'classes', classItem.id), { ...classItem });
     return true;
   } catch (error) {
     console.error('Error adding class:', error);
