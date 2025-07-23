@@ -157,7 +157,7 @@ const Navigation: React.FC = () => {
     <Nav>
       <NavContainer>
         <Logo to="/">
-          <LogoImage src="/logo.png" alt="re: Play Logo" />
+          <LogoImage src={`${import.meta.env.BASE_URL}replay_image.png`} alt="re: Play Logo" />
           re: Play
         </Logo>
         
