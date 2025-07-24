@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useData } from '../context/DataContext';
@@ -116,14 +116,14 @@ const Bio = styled.div`
   margin-bottom: 2rem;
 `;
 
-const ImageGallery = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
+const ImageSliderContainer = styled.div`
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto 2rem;
 `;
 
-const InstructorImage = styled.div`
+const ImageSlider = styled.div`
   aspect-ratio: 4/3;
   background: linear-gradient(45deg, #3498db, #2980b9);
   border-radius: 10px;
@@ -134,12 +134,61 @@ const InstructorImage = styled.div`
   font-size: 1.2rem;
   box-shadow: 0 4px 6px rgba(0,0,0,0.1);
   overflow: hidden;
+  position: relative;
   
   img {
     width: 100%;
     height: 100%;
     object-fit: cover;
   }
+`;
+
+const SliderButton = styled.button`
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.6);
+  color: white;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: background 0.3s;
+  
+  &:hover {
+    background: rgba(0,0,0,0.8);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const PrevButton = styled(SliderButton)`
+  left: 10px;
+`;
+
+const NextButton = styled(SliderButton)`
+  right: 10px;
+`;
+
+const ImageCounter = styled.div`
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  z-index: 10;
 `;
 
 const ClassesSection = styled.div`
@@ -206,6 +255,7 @@ const InstructorDetail: React.FC = () => {
   const navigate = useNavigate();
   const { instructors, deleteInstructor, classes } = useData();
   const { isAdmin } = useAuth();
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const instructor = instructors.find(inst => inst.id === id);
 
@@ -240,6 +290,18 @@ const InstructorDetail: React.FC = () => {
       day: 'numeric',
       weekday: 'long'
     });
+  };
+
+  const handlePrevImage = () => {
+    if (instructor?.images && currentImageIndex > 0) {
+      setCurrentImageIndex(currentImageIndex - 1);
+    }
+  };
+
+  const handleNextImage = () => {
+    if (instructor?.images && currentImageIndex < instructor.images.length - 1) {
+      setCurrentImageIndex(currentImageIndex + 1);
+    }
   };
 
   return (
@@ -280,17 +342,35 @@ const InstructorDetail: React.FC = () => {
       {instructor.images && instructor.images.length > 0 && (
         <ContentSection>
           <SectionTitle>강사 사진</SectionTitle>
-          <ImageGallery>
-            {instructor.images.map((image, index) => (
-              <InstructorImage key={index}>
-                {image.startsWith('data:') ? (
-                  <img src={image} alt={`${instructor.name} 사진 ${index + 1}`} />
-                ) : (
-                  `강사 활동 사진 ${index + 1}`
-                )}
-              </InstructorImage>
-            ))}
-          </ImageGallery>
+          <ImageSliderContainer>
+            <ImageSlider>
+              {instructor.images[currentImageIndex].startsWith('data:') ? (
+                <img src={instructor.images[currentImageIndex]} alt={`${instructor.name} 사진 ${currentImageIndex + 1}`} />
+              ) : (
+                `강사 활동 사진 ${currentImageIndex + 1}`
+              )}
+              
+              {instructor.images.length > 1 && (
+                <>
+                  <PrevButton 
+                    onClick={handlePrevImage}
+                    disabled={currentImageIndex === 0}
+                  >
+                    ‹
+                  </PrevButton>
+                  <NextButton 
+                    onClick={handleNextImage}
+                    disabled={currentImageIndex === instructor.images.length - 1}
+                  >
+                    ›
+                  </NextButton>
+                  <ImageCounter>
+                    {currentImageIndex + 1} / {instructor.images.length}
+                  </ImageCounter>
+                </>
+              )}
+            </ImageSlider>
+          </ImageSliderContainer>
         </ContentSection>
       )}
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useData } from '../context/DataContext';
@@ -264,11 +264,87 @@ const ControlButton = styled.button<{ disabled?: boolean }>`
   }
 `;
 
+const ImageSliderContainer = styled.div`
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto 2rem;
+`;
+
+const ImageSlider = styled.div`
+  aspect-ratio: 4/3;
+  background: linear-gradient(45deg, #3498db, #2980b9);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.2rem;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  overflow: hidden;
+  position: relative;
+  
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+`;
+
+const SliderButton = styled.button`
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.6);
+  color: white;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: background 0.3s;
+  
+  &:hover {
+    background: rgba(0,0,0,0.8);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const PrevButton = styled(SliderButton)`
+  left: 10px;
+`;
+
+const NextButton = styled(SliderButton)`
+  right: 10px;
+`;
+
+const ImageCounter = styled.div`
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  z-index: 10;
+`;
+
 const ClassDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { classes, deleteClass, updateClass } = useData();
   const { isAdmin } = useAuth();
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const classItem = classes.find(cls => cls.id === id);
 
@@ -332,6 +408,18 @@ const ClassDetail: React.FC = () => {
     updateClass(classItem.id, updatedClass);
   };
 
+  const handlePrevImage = () => {
+    if (classItem?.images && currentImageIndex > 0) {
+      setCurrentImageIndex(currentImageIndex - 1);
+    }
+  };
+
+  const handleNextImage = () => {
+    if (classItem?.images && currentImageIndex < classItem.images.length - 1) {
+      setCurrentImageIndex(currentImageIndex + 1);
+    }
+  };
+
   return (
     <Container>
       <BackButton onClick={() => navigate('/registration')}>
@@ -382,6 +470,41 @@ const ClassDetail: React.FC = () => {
           </InfoCard>
         </InfoGrid>
       </ContentSection>
+
+      {classItem.images && classItem.images.length > 0 && (
+        <ContentSection>
+          <SectionTitle>클래스 사진</SectionTitle>
+          <ImageSliderContainer>
+            <ImageSlider>
+              {classItem.images[currentImageIndex].startsWith('data:') ? (
+                <img src={classItem.images[currentImageIndex]} alt={`${classItem.title} 사진 ${currentImageIndex + 1}`} />
+              ) : (
+                `클래스 사진 ${currentImageIndex + 1}`
+              )}
+              
+              {classItem.images.length > 1 && (
+                <>
+                  <PrevButton 
+                    onClick={handlePrevImage}
+                    disabled={currentImageIndex === 0}
+                  >
+                    ‹
+                  </PrevButton>
+                  <NextButton 
+                    onClick={handleNextImage}
+                    disabled={currentImageIndex === classItem.images.length - 1}
+                  >
+                    ›
+                  </NextButton>
+                  <ImageCounter>
+                    {currentImageIndex + 1} / {classItem.images.length}
+                  </ImageCounter>
+                </>
+              )}
+            </ImageSlider>
+          </ImageSliderContainer>
+        </ContentSection>
+      )}
 
       <ContentSection>
         <SectionTitle>상세 설명</SectionTitle>
