@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { uploadMultipleImages } from '../firebase/services';
 import type { Instructor } from '../types';
 
 const Container = styled.div`
@@ -335,6 +336,7 @@ const Instructors: React.FC = () => {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingInstructor, setEditingInstructor] = useState<Instructor | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [formData, setFormData] = useState<Instructor>({
     id: '',
     name: '',
@@ -348,6 +350,7 @@ const Instructors: React.FC = () => {
 
   const handleAddInstructor = () => {
     setEditingInstructor(null);
+    setImageFiles([]);
     setFormData({
       id: '',
       name: '',
@@ -363,6 +366,7 @@ const Instructors: React.FC = () => {
 
   const handleEditInstructor = (instructor: Instructor) => {
     setEditingInstructor(instructor);
+    setImageFiles([]);
     setFormData({...instructor});
     setSpecialtiesInput(instructor.specialties.join(', '));
     setIsModalOpen(true);
@@ -374,36 +378,51 @@ const Instructors: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // specialtiesInput을 배열로 변환
-    const specialties = specialtiesInput.split(',').map(s => s.trim()).filter(s => s);
-    
-    const instructorData = {
-      ...formData,
-      specialties
-    };
-    
-    // 전체 데이터 크기 체크 (Firebase 1MB 제한 고려)
-    const dataSize = JSON.stringify(instructorData).length;
-    if (dataSize > 800000) { // 800KB 제한 (여유분 고려)
-      alert('강사 데이터가 너무 큽니다. 이미지 수를 줄이거나 더 작은 이미지를 사용해주세요.');
-      return;
-    }
-    
-    if (editingInstructor) {
-      updateInstructor(editingInstructor.id, instructorData);
-    } else {
-      const newInstructor = {
-        ...instructorData,
-        id: Date.now().toString()
+    try {
+      // specialtiesInput을 배열로 변환
+      const specialties = specialtiesInput.split(',').map(s => s.trim()).filter(s => s);
+      
+      let imageUrls: string[] = [];
+      
+      // 새로 추가된 이미지가 있으면 Storage에 업로드
+      if (imageFiles.length > 0) {
+        console.log('Uploading', imageFiles.length, 'images to Firebase Storage...');
+        imageUrls = await uploadMultipleImages(imageFiles, 'instructors');
+        console.log('Images uploaded successfully:', imageUrls);
+      }
+      
+      // 기존 이미지 URL들과 새 이미지 URL들 합치기
+      const existingUrls = editingInstructor?.images?.filter(img => img.startsWith('http')) || [];
+      const allImageUrls = [...existingUrls, ...imageUrls];
+      
+      const instructorData = {
+        ...formData,
+        specialties,
+        images: allImageUrls
       };
-      addInstructor(newInstructor);
+      
+      if (editingInstructor) {
+        await updateInstructor(editingInstructor.id, instructorData);
+      } else {
+        const newInstructor = {
+          ...instructorData,
+          id: Date.now().toString()
+        };
+        await addInstructor(newInstructor);
+      }
+      
+      // 상태 초기화
+      setImageFiles([]);
+      setSpecialtiesInput('');
+      setIsModalOpen(false);
+      
+    } catch (error) {
+      console.error('Error saving instructor:', error);
+      alert('강사 정보 저장 중 오류가 발생했습니다. 다시 시도해주세요.');
     }
-    
-    setSpecialtiesInput('');
-    setIsModalOpen(false);
   };
 
   const handleSpecialtiesChange = (value: string) => {
@@ -414,6 +433,8 @@ const Instructors: React.FC = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
+      const validFiles: File[] = [];
+      
       Array.from(files).forEach(file => {
         // 파일 크기 체크 (5MB 제한)
         if (file.size > 5 * 1024 * 1024) {
@@ -421,16 +442,12 @@ const Instructors: React.FC = () => {
           return;
         }
         
+        validFiles.push(file);
+        
+        // 미리보기용 URL 생성
         const reader = new FileReader();
         reader.onload = (event) => {
           const result = event.target?.result as string;
-          
-          // Base64 데이터 크기 체크 (대략 500KB 제한)
-          if (result.length > 500000) {
-            alert(`${file.name} 이미지가 너무 큽니다. 더 작은 이미지를 선택하거나 압축해주세요.`);
-            return;
-          }
-          
           setFormData(prev => ({
             ...prev, 
             images: [...prev.images, result]
@@ -438,6 +455,9 @@ const Instructors: React.FC = () => {
         };
         reader.readAsDataURL(file);
       });
+      
+      // 실제 업로드할 파일들 저장
+      setImageFiles(prev => [...prev, ...validFiles]);
     }
   };
 
@@ -446,6 +466,7 @@ const Instructors: React.FC = () => {
       ...prev,
       images: prev.images.filter((_, i) => i !== index)
     }));
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const InstructorImageComponent: React.FC<{ instructor: typeof instructors[0] }> = ({ instructor }) => {
