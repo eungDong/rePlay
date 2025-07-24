@@ -364,6 +364,12 @@ const Registration: React.FC = () => {
   };
 
   const handleRegistration = (classItem: Class) => {
+    const now = new Date();
+    if (classItem.date < now) {
+      alert('이미 종료된 수업입니다.');
+      return;
+    }
+    
     if (classItem.googleFormUrl) {
       window.open(classItem.googleFormUrl, '_blank');
     } else {
@@ -495,13 +501,15 @@ const Registration: React.FC = () => {
             {isAdmin ? (
               <>
                 <RegistrationButton
-                  disabled={classItem.currentParticipants >= classItem.maxParticipants}
+                  disabled={classItem.currentParticipants >= classItem.maxParticipants || new Date() > classItem.date}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleRegistration(classItem);
                   }}
                 >
-                  {classItem.currentParticipants >= classItem.maxParticipants 
+                  {new Date() > classItem.date
+                    ? '마감'
+                    : classItem.currentParticipants >= classItem.maxParticipants 
                     ? '마감' 
                     : '수강신청하기'
                   }
@@ -524,13 +532,15 @@ const Registration: React.FC = () => {
               </>
             ) : (
               <RegistrationButton
-                disabled={classItem.currentParticipants >= classItem.maxParticipants}
+                disabled={classItem.currentParticipants >= classItem.maxParticipants || new Date() > classItem.date}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleRegistration(classItem);
                 }}
               >
-                {classItem.currentParticipants >= classItem.maxParticipants 
+                {new Date() > classItem.date
+                  ? '마감'
+                  : classItem.currentParticipants >= classItem.maxParticipants 
                   ? '마감' 
                   : '수강신청하기'
                 }
