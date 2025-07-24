@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { compressImage, validateImageSize } from '../utils/imageCompression';
+import { uploadMultipleImages } from '../firebase/services';
 import type { Instructor } from '../types';
 
 const Container = styled.div`
@@ -228,6 +228,8 @@ const InstructorEdit: React.FC = () => {
   });
 
   const [error, setError] = useState('');
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [previewImages, setPreviewImages] = useState<string[]>([]);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -249,6 +251,10 @@ const InstructorEdit: React.FC = () => {
       experience: instructorToEdit.experience,
       detailedDescription: instructorToEdit.detailedDescription || ''
     });
+    
+    // Set existing images as previews
+    setPreviewImages(instructorToEdit.images || []);
+    setImageFiles([]);
   }, [id, instructors, isAdmin, navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -259,45 +265,67 @@ const InstructorEdit: React.FC = () => {
     }));
   };
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
+      const newFiles: File[] = [];
+      const newPreviews: string[] = [];
+      
       for (const file of Array.from(files)) {
-        try {
-          // Check if adding this image would exceed the limit of 5 images
-          if (formData.images.length >= 5) {
-            setError('최대 5장의 이미지만 업로드할 수 있습니다.');
-            break;
-          }
-
-          if (!validateImageSize(file)) {
-            setError('이미지 파일 크기는 10MB 이하여야 합니다.');
-            continue;
-          }
-
-          const compressedImage = await compressImage(file);
-          setFormData(prev => ({
-            ...prev, 
-            images: [...prev.images, compressedImage]
-          }));
-        } catch (error) {
-          console.error('Error compressing image:', error);
-          setError('이미지 압축 중 오류가 발생했습니다.');
+        // Check if adding this image would exceed the limit of 5 images
+        if (previewImages.length + newFiles.length >= 5) {
+          setError('최대 5장의 이미지만 업로드할 수 있습니다.');
+          break;
         }
+
+        // File size check (10MB limit)
+        if (file.size > 10 * 1024 * 1024) {
+          setError('이미지 파일 크기는 10MB 이하여야 합니다.');
+          continue;
+        }
+
+        newFiles.push(file);
+        
+        // Create preview URL
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const result = event.target?.result as string;
+          newPreviews.push(result);
+          
+          // Update previews when all files are read
+          if (newPreviews.length === newFiles.length) {
+            setPreviewImages(prev => [...prev, ...newPreviews]);
+          }
+        };
+        reader.readAsDataURL(file);
       }
+      
+      setImageFiles(prev => [...prev, ...newFiles]);
     }
     // Reset file input
     e.target.value = '';
   };
 
   const removeImage = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index)
-    }));
+    // Check if this is an existing image or a new file
+    const existingImagesCount = formData.images.length;
+    
+    if (index < existingImagesCount) {
+      // Removing existing image
+      setFormData(prev => ({
+        ...prev,
+        images: prev.images.filter((_, i) => i !== index)
+      }));
+    } else {
+      // Removing new file
+      const newFileIndex = index - existingImagesCount;
+      setImageFiles(prev => prev.filter((_, i) => i !== newFileIndex));
+    }
+    
+    setPreviewImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -305,7 +333,6 @@ const InstructorEdit: React.FC = () => {
       setError('강사명을 입력해주세요.');
       return;
     }
-
 
     if (!formData.bio.trim()) {
       setError('소개를 입력해주세요.');
@@ -328,19 +355,33 @@ const InstructorEdit: React.FC = () => {
       return;
     }
 
-    const updatedInstructor: Instructor = {
-      ...currentInstructor,
-      name: formData.name.trim(),
-      bio: formData.bio.trim(),
-      images: formData.images,
-      specialties: formData.specialties.split(',').map(s => s.trim()).filter(s => s),
-      experience: formData.experience.trim(),
-      detailedDescription: formData.detailedDescription.trim()
-    };
+    try {
+      // Upload new images to Firebase Storage
+      let newImageUrls: string[] = [];
+      if (imageFiles.length > 0) {
+        newImageUrls = await uploadMultipleImages(imageFiles, 'instructors');
+      }
 
-    updateInstructor(id!, updatedInstructor);
-    alert('강사 정보가 수정되었습니다.');
-    navigate(`/instructor/${id}`);
+      // Combine existing images with new uploaded images
+      const allImageUrls = [...formData.images, ...newImageUrls];
+
+      const updatedInstructor: Instructor = {
+        ...currentInstructor,
+        name: formData.name.trim(),
+        bio: formData.bio.trim(),
+        images: allImageUrls,
+        specialties: formData.specialties.split(',').map(s => s.trim()).filter(s => s),
+        experience: formData.experience.trim(),
+        detailedDescription: formData.detailedDescription.trim()
+      };
+
+      await updateInstructor(id!, updatedInstructor);
+      alert('강사 정보가 수정되었습니다.');
+      navigate(`/instructor/${id}`);
+    } catch (error) {
+      console.error('Error updating instructor:', error);
+      setError('강사 정보 수정 중 오류가 발생했습니다. 다시 시도해주세요.');
+    }
   };
 
   const instructorToEdit = instructors.find(inst => inst.id === id);
@@ -406,7 +447,7 @@ const InstructorEdit: React.FC = () => {
           <FormGroup>
             <Label>프로필 사진 (여러 장 선택 가능)</Label>
             <ImagePreview>
-              {formData.images.map((image, index) => (
+              {previewImages.map((image, index) => (
                 <PreviewImage key={index}>
                   <img src={image} alt={`미리보기 ${index + 1}`} />
                   <RemoveImageButton onClick={() => removeImage(index)}>
@@ -414,7 +455,7 @@ const InstructorEdit: React.FC = () => {
                   </RemoveImageButton>
                 </PreviewImage>
               ))}
-              {formData.images.length < 5 && (
+              {previewImages.length < 5 && (
                 <AddImagePlaceholder onClick={() => document.getElementById('imageUpload')?.click()}>
                   +
                 </AddImagePlaceholder>
@@ -428,7 +469,7 @@ const InstructorEdit: React.FC = () => {
               onChange={handleImageChange}
             />
             <small style={{ color: '#666', marginTop: '0.5rem' }}>
-              강사 프로필 사진을 최대 5장까지 업로드할 수 있습니다. ({formData.images.length}/5)
+              강사 프로필 사진을 최대 5장까지 업로드할 수 있습니다. ({previewImages.length}/5)
             </small>
           </FormGroup>
 

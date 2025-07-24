@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { compressImage, validateImageSize } from '../utils/imageCompression';
+import { uploadMultipleImages } from '../firebase/services';
 import type { Class } from '../types';
 
 const Container = styled.div`
@@ -247,6 +247,8 @@ const ClassEdit: React.FC = () => {
   });
 
   const [error, setError] = useState('');
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [previewImages, setPreviewImages] = useState<string[]>([]);
 
   useEffect(() => {
     if (!isAdmin) {

@@ -336,7 +336,6 @@ const Instructors: React.FC = () => {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingInstructor, setEditingInstructor] = useState<Instructor | null>(null);
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [formData, setFormData] = useState<Instructor>({
     id: '',
     name: '',
@@ -347,10 +346,12 @@ const Instructors: React.FC = () => {
     detailedDescription: ''
   });
   const [specialtiesInput, setSpecialtiesInput] = useState('');
+  const [error, setError] = useState('');
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [previewImages, setPreviewImages] = useState<string[]>([]);
 
   const handleAddInstructor = () => {
     setEditingInstructor(null);
-    setImageFiles([]);
     setFormData({
       id: '',
       name: '',
@@ -361,14 +362,15 @@ const Instructors: React.FC = () => {
       detailedDescription: ''
     });
     setSpecialtiesInput('');
+    setError('');
     setIsModalOpen(true);
   };
 
   const handleEditInstructor = (instructor: Instructor) => {
     setEditingInstructor(instructor);
-    setImageFiles([]);
     setFormData({...instructor});
     setSpecialtiesInput(instructor.specialties.join(', '));
+    setError('');
     setIsModalOpen(true);
   };
 
@@ -380,23 +382,22 @@ const Instructors: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     
     try {
       // specialtiesInput을 배열로 변환
       const specialties = specialtiesInput.split(',').map(s => s.trim()).filter(s => s);
       
-      let imageUrls: string[] = [];
-      
-      // 새로 추가된 이미지가 있으면 Storage에 업로드
+      // Upload new images to Firebase Storage
+      let newImageUrls: string[] = [];
       if (imageFiles.length > 0) {
-        console.log('Uploading', imageFiles.length, 'images to Firebase Storage...');
-        imageUrls = await uploadMultipleImages(imageFiles, 'instructors');
-        console.log('Images uploaded successfully:', imageUrls);
+        newImageUrls = await uploadMultipleImages(imageFiles, 'instructors');
       }
-      
-      // 기존 이미지 URL들과 새 이미지 URL들 합치기
-      const existingUrls = editingInstructor?.images?.filter(img => img.startsWith('http')) || [];
-      const allImageUrls = [...existingUrls, ...imageUrls];
+
+      // Combine existing images with new uploaded images
+      const allImageUrls = editingInstructor 
+        ? [...formData.images, ...newImageUrls]
+        : newImageUrls;
       
       const instructorData = {
         ...formData,
@@ -406,22 +407,25 @@ const Instructors: React.FC = () => {
       
       if (editingInstructor) {
         await updateInstructor(editingInstructor.id, instructorData);
+        alert('강사 정보가 수정되었습니다.');
       } else {
         const newInstructor = {
           ...instructorData,
           id: Date.now().toString()
         };
         await addInstructor(newInstructor);
+        alert('새 강사가 추가되었습니다.');
       }
       
       // 상태 초기화
-      setImageFiles([]);
       setSpecialtiesInput('');
+      setImageFiles([]);
+      setPreviewImages([]);
       setIsModalOpen(false);
       
     } catch (error) {
       console.error('Error saving instructor:', error);
-      alert('강사 정보 저장 중 오류가 발생했습니다. 다시 시도해주세요.');
+      setError('강사 정보 저장 중 오류가 발생했습니다. 다시 시도해주세요.');
     }
   };
 
@@ -430,35 +434,35 @@ const Instructors: React.FC = () => {
     setSpecialtiesInput(value);
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      const validFiles: File[] = [];
-      
-      Array.from(files).forEach(file => {
-        // 파일 크기 체크 (5MB 제한)
-        if (file.size > 5 * 1024 * 1024) {
-          alert(`${file.name} 파일이 너무 큽니다. 5MB 이하의 이미지를 선택해주세요.`);
-          return;
-        }
-        
-        validFiles.push(file);
-        
-        // 미리보기용 URL 생성
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const result = event.target?.result as string;
+      for (const file of Array.from(files)) {
+        try {
+          // Check if adding this image would exceed the limit of 5 images
+          if (formData.images.length >= 5) {
+            setError('최대 5장의 이미지만 업로드할 수 있습니다.');
+            break;
+          }
+
+          if (!validateImageSize(file)) {
+            setError('이미지 파일 크기는 10MB 이하여야 합니다.');
+            continue;
+          }
+
+          const compressedImage = await compressImage(file);
           setFormData(prev => ({
             ...prev, 
-            images: [...prev.images, result]
+            images: [...prev.images, compressedImage]
           }));
-        };
-        reader.readAsDataURL(file);
-      });
-      
-      // 실제 업로드할 파일들 저장
-      setImageFiles(prev => [...prev, ...validFiles]);
+        } catch (error) {
+          console.error('Error compressing image:', error);
+          setError('이미지 압축 중 오류가 발생했습니다.');
+        }
+      }
     }
+    // Reset file input
+    e.target.value = '';
   };
 
   const removeImage = (index: number) => {
@@ -466,7 +470,6 @@ const Instructors: React.FC = () => {
       ...prev,
       images: prev.images.filter((_, i) => i !== index)
     }));
-    setImageFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const InstructorImageComponent: React.FC<{ instructor: typeof instructors[0] }> = ({ instructor }) => {
@@ -592,6 +595,17 @@ const Instructors: React.FC = () => {
         <Modal onClick={(e) => e.target === e.currentTarget && setIsModalOpen(false)}>
           <ModalContent>
             <h3>{editingInstructor ? '강사 정보 수정' : '새 강사 추가'}</h3>
+            {error && (
+              <div style={{ 
+                background: '#e74c3c', 
+                color: 'white', 
+                padding: '1rem', 
+                borderRadius: '8px', 
+                marginBottom: '1rem' 
+              }}>
+                {error}
+              </div>
+            )}
             <Form onSubmit={handleSubmit}>
               <FormGroup>
                 <Label>프로필 사진 (여러 장 선택 가능)</Label>
@@ -604,9 +618,11 @@ const Instructors: React.FC = () => {
                       </RemoveImageButton>
                     </PreviewImage>
                   ))}
-                  <AddImagePlaceholder onClick={() => document.getElementById('imageUpload')?.click()}>
-                    +
-                  </AddImagePlaceholder>
+                  {formData.images.length < 5 && (
+                    <AddImagePlaceholder onClick={() => document.getElementById('imageUpload')?.click()}>
+                      +
+                    </AddImagePlaceholder>
+                  )}
                 </ImagePreview>
                 <FileInput
                   id="imageUpload"
@@ -615,6 +631,9 @@ const Instructors: React.FC = () => {
                   multiple
                   onChange={handleImageChange}
                 />
+                <small style={{ color: '#666', marginTop: '0.5rem' }}>
+                  강사 프로필 사진을 최대 5장까지 업로드할 수 있습니다. ({formData.images.length}/5)
+                </small>
               </FormGroup>
               
               <FormGroup>
