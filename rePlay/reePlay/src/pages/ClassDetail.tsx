@@ -339,12 +339,63 @@ const ImageCounter = styled.div`
   z-index: 10;
 `;
 
+const FullScreenModal = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  cursor: pointer;
+`;
+
+const FullScreenImage = styled.img`
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  cursor: default;
+`;
+
+const CloseButton = styled.button`
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255,255,255,0.2);
+  color: white;
+  border: none;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s;
+  
+  &:hover {
+    background: rgba(255,255,255,0.3);
+  }
+`;
+
+const ClickableImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: pointer;
+`;
+
 const ClassDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { classes, deleteClass, updateClass } = useData();
   const { isAdmin } = useAuth();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
 
   const classItem = classes.find(cls => cls.id === id);
 
@@ -420,6 +471,14 @@ const ClassDetail: React.FC = () => {
     }
   };
 
+  const openFullScreen = () => {
+    setIsFullScreenOpen(true);
+  };
+
+  const closeFullScreen = () => {
+    setIsFullScreenOpen(false);
+  };
+
   return (
     <Container>
       <BackButton onClick={() => navigate('/registration')}>
@@ -477,7 +536,11 @@ const ClassDetail: React.FC = () => {
           <ImageSliderContainer>
             <ImageSlider>
               {classItem.images[currentImageIndex].startsWith('data:') ? (
-                <img src={classItem.images[currentImageIndex]} alt={`${classItem.title} 사진 ${currentImageIndex + 1}`} />
+                <ClickableImage 
+                  src={classItem.images[currentImageIndex]} 
+                  alt={`${classItem.title} 사진 ${currentImageIndex + 1}`}
+                  onClick={openFullScreen}
+                />
               ) : (
                 `클래스 사진 ${currentImageIndex + 1}`
               )}
@@ -546,6 +609,17 @@ const ClassDetail: React.FC = () => {
           </>
         )}
       </ActionButtons>
+
+      {isFullScreenOpen && classItem.images && classItem.images[currentImageIndex].startsWith('data:') && (
+        <FullScreenModal onClick={closeFullScreen}>
+          <CloseButton onClick={closeFullScreen}>×</CloseButton>
+          <FullScreenImage 
+            src={classItem.images[currentImageIndex]} 
+            alt={`${classItem.title} 사진 ${currentImageIndex + 1}`}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </FullScreenModal>
+      )}
     </Container>
   );
 };
