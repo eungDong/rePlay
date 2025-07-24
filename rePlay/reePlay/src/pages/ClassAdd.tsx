@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
+import { compressImage, validateImageSize } from '../utils/imageCompression';
 import type { Class } from '../types';
 
 const Container = styled.div`
@@ -261,20 +262,26 @@ const ClassAdd: React.FC = () => {
     }));
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      Array.from(files).forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const result = event.target?.result as string;
+      for (const file of Array.from(files)) {
+        try {
+          if (!validateImageSize(file)) {
+            setError('이미지 파일 크기는 10MB 이하여야 합니다.');
+            continue;
+          }
+
+          const compressedImage = await compressImage(file);
           setFormData(prev => ({
             ...prev, 
-            images: [...prev.images, result]
+            images: [...prev.images, compressedImage]
           }));
-        };
-        reader.readAsDataURL(file);
-      });
+        } catch (error) {
+          console.error('Error compressing image:', error);
+          setError('이미지 압축 중 오류가 발생했습니다.');
+        }
+      }
     }
   };
 
