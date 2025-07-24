@@ -234,6 +234,55 @@ const CloseButton = styled.button`
   }
 `;
 
+const FullScreenSliderButton = styled.button`
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.2);
+  color: white;
+  border: none;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: background 0.3s;
+  
+  &:hover {
+    background: rgba(255,255,255,0.3);
+  }
+  
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+`;
+
+const FullScreenPrevButton = styled(FullScreenSliderButton)`
+  left: 20px;
+`;
+
+const FullScreenNextButton = styled(FullScreenSliderButton)`
+  right: 20px;
+`;
+
+const FullScreenImageCounter = styled.div`
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.6);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 20px;
+  font-size: 1rem;
+  z-index: 10;
+`;
+
 const ClickableImage = styled.img`
   width: 100%;
   height: 100%;
@@ -476,6 +525,31 @@ const InstructorDetail: React.FC = () => {
             alt={`${instructor.name} 사진 ${currentImageIndex + 1}`}
             onClick={(e) => e.stopPropagation()}
           />
+          {instructor.images.length > 1 && (
+            <>
+              <FullScreenPrevButton 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePrevImage();
+                }}
+                disabled={currentImageIndex === 0}
+              >
+                ‹
+              </FullScreenPrevButton>
+              <FullScreenNextButton 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNextImage();
+                }}
+                disabled={currentImageIndex === instructor.images.length - 1}
+              >
+                ›
+              </FullScreenNextButton>
+              <FullScreenImageCounter>
+                {currentImageIndex + 1} / {instructor.images.length}
+              </FullScreenImageCounter>
+            </>
+          )}
         </FullScreenModal>
       )}
     </Container>
