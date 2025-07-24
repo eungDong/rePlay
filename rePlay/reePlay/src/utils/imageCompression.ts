@@ -1,4 +1,4 @@
-export const compressImage = (file: File, maxWidth: number = 800, maxHeight: number = 600, quality: number = 0.8): Promise<string> => {
+export const compressImage = (file: File, maxWidth: number = 600, maxHeight: number = 400, quality: number = 0.6): Promise<string> => {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -26,16 +26,16 @@ export const compressImage = (file: File, maxWidth: number = 800, maxHeight: num
       // Draw and compress
       ctx?.drawImage(img, 0, 0, width, height);
       
-      // Convert to blob with compression
+      // Convert to blob with compression - more aggressive compression for multiple images
       canvas.toBlob(
         (blob) => {
           if (blob) {
             const reader = new FileReader();
             reader.onload = () => {
               const result = reader.result as string;
-              // Check if compressed image is still too large (roughly 800KB limit for base64)
-              if (result.length > 800000) {
-                // Try with more compression
+              // More strict size limit for base64 to allow multiple images (150KB per image)
+              if (result.length > 150000) {
+                // Try with even more compression
                 canvas.toBlob(
                   (secondBlob) => {
                     if (secondBlob) {
@@ -48,7 +48,7 @@ export const compressImage = (file: File, maxWidth: number = 800, maxHeight: num
                     }
                   },
                   'image/jpeg',
-                  0.5 // More aggressive compression
+                  0.3 // Very aggressive compression
                 );
               } else {
                 resolve(result);
