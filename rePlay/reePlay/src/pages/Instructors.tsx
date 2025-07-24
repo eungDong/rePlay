@@ -385,6 +385,13 @@ const Instructors: React.FC = () => {
       specialties
     };
     
+    // 전체 데이터 크기 체크 (Firebase 1MB 제한 고려)
+    const dataSize = JSON.stringify(instructorData).length;
+    if (dataSize > 800000) { // 800KB 제한 (여유분 고려)
+      alert('강사 데이터가 너무 큽니다. 이미지 수를 줄이거나 더 작은 이미지를 사용해주세요.');
+      return;
+    }
+    
     if (editingInstructor) {
       updateInstructor(editingInstructor.id, instructorData);
     } else {
@@ -408,9 +415,22 @@ const Instructors: React.FC = () => {
     const files = e.target.files;
     if (files) {
       Array.from(files).forEach(file => {
+        // 파일 크기 체크 (5MB 제한)
+        if (file.size > 5 * 1024 * 1024) {
+          alert(`${file.name} 파일이 너무 큽니다. 5MB 이하의 이미지를 선택해주세요.`);
+          return;
+        }
+        
         const reader = new FileReader();
         reader.onload = (event) => {
           const result = event.target?.result as string;
+          
+          // Base64 데이터 크기 체크 (대략 500KB 제한)
+          if (result.length > 500000) {
+            alert(`${file.name} 이미지가 너무 큽니다. 더 작은 이미지를 선택하거나 압축해주세요.`);
+            return;
+          }
+          
           setFormData(prev => ({
             ...prev, 
             images: [...prev.images, result]

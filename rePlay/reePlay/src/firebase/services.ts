@@ -52,11 +52,17 @@ export const getInstructors = async (): Promise<Instructor[]> => {
 
 export const addInstructor = async (instructor: Instructor): Promise<boolean> => {
   try {
+    // 데이터 크기 체크
+    const dataSize = JSON.stringify(instructor).length;
+    console.log('Instructor data size:', dataSize, 'bytes');
+    console.log('Images count:', instructor.images?.length || 0);
+    
     // instructor.id를 문서 ID로 사용하여 저장
     await setDoc(doc(db, 'instructors', instructor.id), { ...instructor });
     return true;
   } catch (error) {
     console.error('Error adding instructor:', error);
+    console.error('Instructor data:', instructor);
     return false;
   }
 };
