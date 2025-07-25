@@ -498,7 +498,7 @@ const ClassAdd: React.FC = () => {
               {formData.images.map((image, index) => (
                 <PreviewImage key={index}>
                   <img src={image} alt={`미리보기 ${index + 1}`} />
-                  <RemoveImageButton onClick={() => removeImage(index)}>
+                  <RemoveImageButton type="button" onClick={() => removeImage(index)}>
                     ×
                   </RemoveImageButton>
                 </PreviewImage>

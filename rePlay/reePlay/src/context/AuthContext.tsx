@@ -51,7 +51,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(true);
     
     const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'admin@replay.com';
-    const adminPasswordHash = import.meta.env.VITE_ADMIN_PASSWORD_HASH || '3283677a';
+    const adminPasswordHash = import.meta.env.VITE_ADMIN_PASSWORD_HASH || '3c4ebb9a';
     
     // 디버깅 로그
     console.log('입력한 비밀번호 해시:', simpleHash(password));

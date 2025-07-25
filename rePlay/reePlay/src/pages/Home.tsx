@@ -419,7 +419,7 @@ const HiddenLoginButton = styled.button`
 `;
 
 const Home: React.FC = () => {
-  const { organization, classes } = useData();
+  const { organization, classes, isLoading } = useData();
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -477,6 +477,24 @@ const Home: React.FC = () => {
       weekday: 'long'
     });
   };
+
+  if (isLoading) {
+    return (
+      <Container>
+        <div style={{ 
+          textAlign: 'center', 
+          padding: '4rem 2rem',
+          color: '#666',
+          background: 'white',
+          borderRadius: '10px',
+          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+        }}>
+          <h3 style={{ marginBottom: '1rem', color: '#2c3e50' }}>로딩 중...</h3>
+          <p>데이터를 불러오고 있습니다.</p>
+        </div>
+      </Container>
+    );
+  }
 
   return (
     <Container>

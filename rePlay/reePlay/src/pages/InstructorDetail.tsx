@@ -222,8 +222,11 @@ const InstructorDetail: React.FC = () => {
     );
   }
 
-  // 해당 강사가 진행하는 클래스들
-  const instructorClasses = classes.filter(cls => cls.instructor === instructor.name);
+  // 해당 강사가 진행하는 클래스들 (현재 시간 이후만)
+  const now = new Date();
+  const instructorClasses = classes.filter(cls => 
+    cls.instructor === instructor.name && cls.date > now
+  );
 
   const handleDelete = () => {
     if (window.confirm(`정말로 "${instructor.name}" 강사를 삭제하시겠습니까?`)) {

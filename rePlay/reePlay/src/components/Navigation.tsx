@@ -21,13 +21,13 @@ const NavContainer = styled.div`
 `;
 
 const Logo = styled(Link)`
-  font-size: 1.5rem;
+  font-size: 2rem;
   font-weight: bold;
   color: white;
   text-decoration: none;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0;
   
   &:hover {
     color: #3498db;
@@ -35,9 +35,11 @@ const Logo = styled(Link)`
 `;
 
 const LogoImage = styled.img`
-  width: 32px;
-  height: 32px;
+  width: 64px;
+  height: 64px;
   object-fit: contain;
+  margin-left: 0rem;
+  margin-top: 15px;
 `;
 
 const NavLinks = styled.div<{ isOpen: boolean }>`
@@ -157,7 +159,7 @@ const Navigation: React.FC = () => {
     <Nav>
       <NavContainer>
         <Logo to="/">
-          <LogoImage src={`${import.meta.env.BASE_URL}replay_image.png`} alt="re: Play Logo" />
+          <LogoImage src={`${import.meta.env.BASE_URL}리플레이 로고.png`} alt="리플레이 로고" />
           re: Play
         </Logo>
         

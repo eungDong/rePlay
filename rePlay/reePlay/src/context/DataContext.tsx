@@ -1,18 +1,29 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { Instructor, Class, Organization } from '../types';
-import {
-  getOrganization as getOrganizationFromFirebase,
-  updateOrganization as updateOrganizationInFirebase,
-  getInstructors as getInstructorsFromFirebase,
-  addInstructor as addInstructorToFirebase,
-  updateInstructor as updateInstructorInFirebase,
-  deleteInstructor as deleteInstructorFromFirebase,
-  getClasses as getClassesFromFirebase,
-  addClass as addClassToFirebase,
-  updateClass as updateClassInFirebase,
-  deleteClass as deleteClassFromFirebase
-} from '../firebase/services';
+
+// 로컬 개발용 더미 데이터
+const dummyOrganization: Organization = {
+  id: '1',
+  name: 're: Play',
+  description: '전문 피트니스 아카데미',
+  address: '서울시 강남구',
+  phone: '02-1234-5678',
+  email: 'info@replay.com'
+};
+
+// Firebase 서비스를 동적으로 import하여 에러 방지
+let firebaseServices: any = null;
+
+const loadFirebaseServices = async () => {
+  try {
+    firebaseServices = await import('../firebase/services');
+    return firebaseServices;
+  } catch (error) {
+    console.warn('Firebase 서비스 로드 실패, 로컬 모드로 실행:', error);
+    return null;
+  }
+};
 
 interface DataContextType {
   // Organization data
@@ -68,23 +79,34 @@ const defaultOrganization: Organization = {
 };
 
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
-  const [organization, setOrganization] = useState<Organization>(defaultOrganization);
+  const [organization, setOrganization] = useState<Organization>(dummyOrganization);
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
 
   // Generate class schedule from classes
   const classSchedule = classes.map(cls => cls.date);
 
-  // Firebase에서 모든 데이터 로드
+  // Firebase에서 모든 데이터 로드 (에러 핸들링 개선)
   const loadData = async () => {
     setIsLoading(true);
+    
     try {
+      const services = await loadFirebaseServices();
+      
+      if (!services) {
+        console.log('오프라인 모드로 실행');
+        setIsOfflineMode(true);
+        setIsLoading(false);
+        return;
+      }
+
       // 병렬로 데이터 로드
       const [orgData, instructorsData, classesData] = await Promise.all([
-        getOrganizationFromFirebase(),
-        getInstructorsFromFirebase(),
-        getClassesFromFirebase()
+        services.getOrganization().catch(() => null),
+        services.getInstructors().catch(() => []),
+        services.getClasses().catch(() => [])
       ]);
 
       if (orgData) {
@@ -92,8 +114,10 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       }
       setInstructors(instructorsData);
       setClasses(classesData);
+      setIsOfflineMode(false);
     } catch (error) {
-      console.error('Error loading data from Firebase:', error);
+      console.warn('Firebase 연결 실패, 오프라인 모드로 전환:', error);
+      setIsOfflineMode(true);
     } finally {
       setIsLoading(false);
     }
@@ -110,62 +134,234 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   }, []);
 
   const updateOrganization = async (org: Organization) => {
-    const success = await updateOrganizationInFirebase(org);
-    if (success) {
+    if (isOfflineMode) {
+      setOrganization(org);
+      return;
+    }
+    
+    try {
+      const services = await loadFirebaseServices();
+      if (services) {
+        const success = await services.updateOrganization(org);
+        if (success) {
+          setOrganization(org);
+        }
+      }
+    } catch (error) {
+      console.warn('Firebase 업데이트 실패, 로컬에서만 업데이트:', error);
       setOrganization(org);
     }
   };
 
   const addInstructor = async (instructor: Instructor) => {
-    const success = await addInstructorToFirebase(instructor);
-    if (success) {
-      // 데이터 새로고침하여 최신 상태 반영
-      const updatedInstructors = await getInstructorsFromFirebase();
-      setInstructors(updatedInstructors);
+    console.log('강사 추가 시작:', instructor);
+    
+    if (isOfflineMode) {
+      console.log('오프라인 모드에서 강사 추가');
+      setInstructors(prev => [...prev, instructor]);
+      return;
+    }
+    
+    try {
+      const services = await loadFirebaseServices();
+      if (services) {
+        console.log('Firebase 서비스로 강사 추가 시도');
+        const success = await services.addInstructor(instructor);
+        if (success) {
+          const updatedInstructors = await services.getInstructors();
+          setInstructors(updatedInstructors);
+          console.log('Firebase에서 강사 추가 성공');
+        } else {
+          console.log('Firebase 추가 실패, 로컬에서만 추가');
+          setInstructors(prev => [...prev, instructor]);
+        }
+      } else {
+        console.log('Firebase 서비스 없음, 로컬에서만 추가');
+        setInstructors(prev => [...prev, instructor]);
+      }
+    } catch (error) {
+      console.warn('Firebase 추가 실패, 로컬에서만 추가:', error);
+      setInstructors(prev => [...prev, instructor]);
     }
   };
 
   const updateInstructor = async (id: string, instructor: Instructor) => {
-    const success = await updateInstructorInFirebase(id, instructor);
-    if (success) {
+    console.log('강사 업데이트 시작:', id, instructor);
+    
+    if (isOfflineMode) {
+      console.log('오프라인 모드에서 강사 업데이트');
+      const updatedInstructors = instructors.map(inst => inst.id === id ? { ...instructor, id } : inst);
+      setInstructors(updatedInstructors);
+      return;
+    }
+    
+    try {
+      const services = await loadFirebaseServices();
+      if (services) {
+        console.log('Firebase 서비스로 강사 업데이트 시도');
+        const success = await services.updateInstructor(id, instructor);
+        if (success) {
+          const updatedInstructors = instructors.map(inst => inst.id === id ? { ...instructor, id } : inst);
+          setInstructors(updatedInstructors);
+          console.log('Firebase에서 강사 업데이트 성공');
+        } else {
+          console.log('Firebase 업데이트 실패, 로컬에서만 업데이트');
+          const updatedInstructors = instructors.map(inst => inst.id === id ? { ...instructor, id } : inst);
+          setInstructors(updatedInstructors);
+        }
+      } else {
+        console.log('Firebase 서비스 없음, 로컬에서만 업데이트');
+        const updatedInstructors = instructors.map(inst => inst.id === id ? { ...instructor, id } : inst);
+        setInstructors(updatedInstructors);
+      }
+    } catch (error) {
+      console.warn('Firebase 업데이트 실패, 로컬에서만 업데이트:', error);
       const updatedInstructors = instructors.map(inst => inst.id === id ? { ...instructor, id } : inst);
       setInstructors(updatedInstructors);
     }
   };
 
   const deleteInstructor = async (id: string) => {
-    const success = await deleteInstructorFromFirebase(id);
-    if (success) {
+    console.log('강사 삭제 시작:', id);
+    
+    if (isOfflineMode) {
+      console.log('오프라인 모드에서 강사 삭제');
+      setInstructors(instructors.filter(inst => inst.id !== id));
+      return;
+    }
+    
+    try {
+      const services = await loadFirebaseServices();
+      if (services) {
+        console.log('Firebase 서비스로 강사 삭제 시도');
+        const success = await services.deleteInstructor(id);
+        if (success) {
+          setInstructors(instructors.filter(inst => inst.id !== id));
+          console.log('Firebase에서 강사 삭제 성공');
+        } else {
+          console.log('Firebase 삭제 실패, 로컬에서만 삭제');
+          setInstructors(instructors.filter(inst => inst.id !== id));
+        }
+      } else {
+        console.log('Firebase 서비스 없음, 로컬에서만 삭제');
+        setInstructors(instructors.filter(inst => inst.id !== id));
+      }
+    } catch (error) {
+      console.warn('Firebase 삭제 실패, 로컬에서만 삭제:', error);
       setInstructors(instructors.filter(inst => inst.id !== id));
     }
   };
 
   const addClass = async (classItem: Class) => {
-    const success = await addClassToFirebase(classItem);
-    if (success) {
-      // 데이터 새로고침하여 최신 상태 반영
-      const updatedClasses = await getClassesFromFirebase();
-      setClasses(updatedClasses);
+    console.log('클래스 추가 시작:', classItem);
+    
+    if (isOfflineMode) {
+      console.log('오프라인 모드에서 클래스 추가');
+      setClasses(prev => [...prev, classItem]);
+      return;
+    }
+    
+    try {
+      const services = await loadFirebaseServices();
+      if (services) {
+        console.log('Firebase 서비스로 클래스 추가 시도');
+        const success = await services.addClass(classItem);
+        if (success) {
+          const updatedClasses = await services.getClasses();
+          setClasses(updatedClasses);
+          console.log('Firebase에서 클래스 추가 성공');
+        } else {
+          console.log('Firebase 추가 실패, 로컬에서만 추가');
+          setClasses(prev => [...prev, classItem]);
+        }
+      } else {
+        console.log('Firebase 서비스 없음, 로컬에서만 추가');
+        setClasses(prev => [...prev, classItem]);
+      }
+    } catch (error) {
+      console.warn('Firebase 추가 실패, 로컬에서만 추가:', error);
+      setClasses(prev => [...prev, classItem]);
     }
   };
 
   const updateClass = async (id: string, classItem: Class) => {
-    const success = await updateClassInFirebase(id, classItem);
-    if (success) {
+    console.log('클래스 업데이트 시작:', id, classItem);
+    
+    if (isOfflineMode) {
+      console.log('오프라인 모드에서 클래스 업데이트');
+      const updatedClasses = classes.map(cls => cls.id === id ? { ...classItem, id } : cls);
+      setClasses(updatedClasses);
+      return;
+    }
+    
+    try {
+      const services = await loadFirebaseServices();
+      if (services) {
+        console.log('Firebase 서비스로 클래스 업데이트 시도');
+        const success = await services.updateClass(id, classItem);
+        if (success) {
+          const updatedClasses = classes.map(cls => cls.id === id ? { ...classItem, id } : cls);
+          setClasses(updatedClasses);
+          console.log('Firebase에서 클래스 업데이트 성공');
+        } else {
+          console.log('Firebase 업데이트 실패, 로컬에서만 업데이트');
+          const updatedClasses = classes.map(cls => cls.id === id ? { ...classItem, id } : cls);
+          setClasses(updatedClasses);
+        }
+      } else {
+        console.log('Firebase 서비스 없음, 로컬에서만 업데이트');
+        const updatedClasses = classes.map(cls => cls.id === id ? { ...classItem, id } : cls);
+        setClasses(updatedClasses);
+      }
+    } catch (error) {
+      console.warn('Firebase 업데이트 실패, 로컬에서만 업데이트:', error);
       const updatedClasses = classes.map(cls => cls.id === id ? { ...classItem, id } : cls);
       setClasses(updatedClasses);
     }
   };
 
   const deleteClass = async (id: string) => {
-    const success = await deleteClassFromFirebase(id);
-    if (success) {
+    console.log('클래스 삭제 시작:', id);
+    
+    if (isOfflineMode) {
+      console.log('오프라인 모드에서 클래스 삭제');
+      setClasses(classes.filter(cls => cls.id !== id));
+      return;
+    }
+    
+    try {
+      const services = await loadFirebaseServices();
+      if (services) {
+        console.log('Firebase 서비스로 클래스 삭제 시도');
+        const success = await services.deleteClass(id);
+        if (success) {
+          setClasses(classes.filter(cls => cls.id !== id));
+          console.log('Firebase에서 클래스 삭제 성공');
+        } else {
+          console.log('Firebase 삭제 실패, 로컬에서만 삭제');
+          setClasses(classes.filter(cls => cls.id !== id));
+        }
+      } else {
+        console.log('Firebase 서비스 없음, 로컬에서만 삭제');
+        setClasses(classes.filter(cls => cls.id !== id));
+      }
+    } catch (error) {
+      console.warn('Firebase 삭제 실패, 로컬에서만 삭제:', error);
       setClasses(classes.filter(cls => cls.id !== id));
     }
   };
 
   const refreshData = async () => {
-    await loadData();
+    if (isOfflineMode) {
+      console.log('오프라인 모드에서는 데이터 새로고침을 할 수 없습니다.');
+      return;
+    }
+    
+    try {
+      await loadData();
+    } catch (error) {
+      console.warn('데이터 새로고침 실패:', error);
+    }
   };
 
   const value = {

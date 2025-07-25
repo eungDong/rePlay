@@ -340,7 +340,7 @@ const Input = styled.input`
 
 
 const Registration: React.FC = () => {
-  const { classes, deleteClass, organization, updateOrganization } = useData();
+  const { classes, deleteClass, organization, updateOrganization, isLoading } = useData();
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
   const [isEditingNotice, setIsEditingNotice] = useState(false);
@@ -408,6 +408,24 @@ const Registration: React.FC = () => {
     setIsEditingNotice(false);
   };
 
+
+  if (isLoading) {
+    return (
+      <Container>
+        <div style={{ 
+          textAlign: 'center', 
+          padding: '4rem 2rem',
+          color: '#666',
+          background: 'white',
+          borderRadius: '10px',
+          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+        }}>
+          <h3 style={{ marginBottom: '1rem', color: '#2c3e50' }}>로딩 중...</h3>
+          <p>클래스 정보를 불러오고 있습니다.</p>
+        </div>
+      </Container>
+    );
+  }
 
   return (
     <Container>

@@ -331,7 +331,7 @@ const FileInput = styled.input`
 
 const Instructors: React.FC = () => {
   const { isAdmin } = useAuth();
-  const { instructors, addInstructor, updateInstructor, deleteInstructor } = useData();
+  const { instructors, addInstructor, updateInstructor, deleteInstructor, isLoading } = useData();
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingInstructor, setEditingInstructor] = useState<Instructor | null>(null);
@@ -475,6 +475,24 @@ const Instructors: React.FC = () => {
       </ImageCarousel>
     );
   };
+
+  if (isLoading) {
+    return (
+      <Container>
+        <div style={{ 
+          textAlign: 'center', 
+          padding: '4rem 2rem',
+          color: '#666',
+          background: 'white',
+          borderRadius: '10px',
+          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+        }}>
+          <h3 style={{ marginBottom: '1rem', color: '#2c3e50' }}>로딩 중...</h3>
+          <p>강사진 정보를 불러오고 있습니다.</p>
+        </div>
+      </Container>
+    );
+  }
 
   return (
     <Container>
