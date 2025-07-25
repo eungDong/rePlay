@@ -1,4 +1,4 @@
-export const compressImage = (file: File, maxWidth: number = 1200, maxHeight: number = 900, quality: number = 0.85): Promise<string> => {
+export const compressImage = (file: File, maxWidth: number = 800, maxHeight: number = 600, quality: number = 0.75): Promise<string> => {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -33,9 +33,9 @@ export const compressImage = (file: File, maxWidth: number = 1200, maxHeight: nu
             const reader = new FileReader();
             reader.onload = () => {
               const result = reader.result as string;
-              // More reasonable size limit for base64 to allow multiple images (180KB per image)
-              if (result.length > 180000) {
-                // Try with moderate compression to maintain quality
+              // Smaller size limit for base64 to allow 10 images (90KB per image)
+              if (result.length > 90000) {
+                // Try with more compression for 10 images support
                 canvas.toBlob(
                   (secondBlob) => {
                     if (secondBlob) {
@@ -48,7 +48,7 @@ export const compressImage = (file: File, maxWidth: number = 1200, maxHeight: nu
                     }
                   },
                   'image/jpeg',
-                  0.7 // Moderate compression to maintain quality
+                  0.5 // More compression for 10 images
                 );
               } else {
                 resolve(result);

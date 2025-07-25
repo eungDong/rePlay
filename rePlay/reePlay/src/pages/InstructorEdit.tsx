@@ -265,9 +265,9 @@ const InstructorEdit: React.FC = () => {
     if (files) {
       for (const file of Array.from(files)) {
         try {
-          // Check if adding this image would exceed the limit of 5 images
-          if (formData.images.length >= 5) {
-            setError('최대 5장의 이미지만 업로드할 수 있습니다.');
+          // Check if adding this image would exceed the limit of 10 images
+          if (formData.images.length >= 10) {
+            setError('최대 10장의 이미지만 업로드할 수 있습니다.');
             break;
           }
 
@@ -414,7 +414,7 @@ const InstructorEdit: React.FC = () => {
                   </RemoveImageButton>
                 </PreviewImage>
               ))}
-              {formData.images.length < 5 && (
+              {formData.images.length < 10 && (
                 <AddImagePlaceholder onClick={() => document.getElementById('imageUpload')?.click()}>
                   +
                 </AddImagePlaceholder>
@@ -428,7 +428,7 @@ const InstructorEdit: React.FC = () => {
               onChange={handleImageChange}
             />
             <small style={{ color: '#666', marginTop: '0.5rem' }}>
-              강사 프로필 사진을 최대 5장까지 업로드할 수 있습니다. ({formData.images.length}/5)
+              강사 프로필 사진을 최대 10장까지 업로드할 수 있습니다. ({formData.images.length}/10)
             </small>
           </FormGroup>
 
