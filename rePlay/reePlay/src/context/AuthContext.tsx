@@ -53,10 +53,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'admin@replay.com';
     const adminPasswordHash = import.meta.env.VITE_ADMIN_PASSWORD_HASH || '3c4ebb9a';
     
-    // 디버깅 로그
-    console.log('입력한 비밀번호 해시:', simpleHash(password));
-    console.log('설정된 해시:', adminPasswordHash);
-    console.log('해시 일치:', simpleHash(password) === adminPasswordHash);
     
     if (email === adminEmail && simpleHash(password) === adminPasswordHash) {
       const adminUser: User = {

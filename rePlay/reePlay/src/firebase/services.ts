@@ -4,14 +4,61 @@ import {
   setDoc, 
   collection, 
   getDocs, 
-  addDoc, 
   updateDoc, 
   deleteDoc, 
   query, 
   orderBy 
 } from 'firebase/firestore';
-import { db } from './config';
+import { 
+  ref, 
+  uploadBytes, 
+  getDownloadURL, 
+  deleteObject 
+} from 'firebase/storage';
+import { db, storage } from './config';
 import type { Organization, Instructor, Class } from '../types';
+
+// 이미지 업로드 함수
+export const uploadImage = async (file: File, folder: string): Promise<string> => {
+  try {
+    const fileName = `${Date.now()}_${file.name}`;
+    const storageRef = ref(storage, `${folder}/${fileName}`);
+    
+    const snapshot = await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    
+    return downloadURL;
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    throw error;
+  }
+};
+
+// 이미지 삭제 함수
+export const deleteImage = async (imageUrl: string): Promise<boolean> => {
+  try {
+    if (!imageUrl.includes('firebase')) return true; // Firebase Storage URL이 아니면 스킵
+    
+    const imageRef = ref(storage, imageUrl);
+    await deleteObject(imageRef);
+    return true;
+  } catch (error) {
+    console.error('Error deleting image:', error);
+    return false;
+  }
+};
+
+// 여러 이미지 업로드 함수
+export const uploadMultipleImages = async (files: File[], folder: string): Promise<string[]> => {
+  try {
+    const uploadPromises = files.map(file => uploadImage(file, folder));
+    const urls = await Promise.all(uploadPromises);
+    return urls;
+  } catch (error) {
+    console.error('Error uploading multiple images:', error);
+    throw error;
+  }
+};
 
 // Organization 관련 함수들
 export const getOrganization = async (): Promise<Organization | null> => {
@@ -55,9 +102,11 @@ export const addInstructor = async (instructor: Instructor): Promise<boolean> =>
   try {
     // instructor.id를 문서 ID로 사용하여 저장
     await setDoc(doc(db, 'instructors', instructor.id), { ...instructor });
+    console.log('Instructor added successfully with', instructor.images?.length || 0, 'images');
     return true;
   } catch (error) {
     console.error('Error adding instructor:', error);
+    console.error('Instructor data:', instructor);
     return false;
   }
 };
@@ -148,13 +197,10 @@ export const updateClass = async (id: string, classItem: Class): Promise<boolean
 
 export const deleteClass = async (id: string): Promise<boolean> => {
   try {
-    console.log('Attempting to delete class with ID:', id);
     await deleteDoc(doc(db, 'classes', id));
-    console.log('Class deleted successfully from Firebase');
     return true;
   } catch (error) {
     console.error('Error deleting class:', error);
-    console.error('Failed to delete class ID:', id);
     return false;
   }
 };

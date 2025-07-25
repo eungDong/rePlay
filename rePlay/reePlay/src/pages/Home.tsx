@@ -455,6 +455,12 @@ const Home: React.FC = () => {
   };
 
   const handleRegistration = (classItem: Class) => {
+    const now = new Date();
+    if (classItem.date < now) {
+      alert('이미 종료된 수업입니다.');
+      return;
+    }
+    
     if (classItem.googleFormUrl) {
       window.open(classItem.googleFormUrl, '_blank');
     } else {
@@ -582,10 +588,12 @@ const Home: React.FC = () => {
                 </ClassInfo>
                 
                 <RegisterButton
-                  disabled={classItem.currentParticipants >= classItem.maxParticipants}
+                  disabled={classItem.currentParticipants >= classItem.maxParticipants || new Date() > classItem.date}
                   onClick={() => handleRegistration(classItem)}
                 >
-                  {classItem.currentParticipants >= classItem.maxParticipants 
+                  {new Date() > classItem.date
+                    ? '마감'
+                    : classItem.currentParticipants >= classItem.maxParticipants 
                     ? '마감' 
                     : '수강신청하기'
                   }

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
+import { compressImage, validateImageSize } from '../utils/imageCompression';
 import type { Class } from '../types';
 
 const Container = styled.div`
@@ -289,6 +290,7 @@ const ClassEdit: React.FC = () => {
         googleFormUrl: classToEdit.googleFormUrl || '',
         images: classToEdit.images || []
       });
+
     } catch (error) {
       console.error('클래스 데이터 초기화 오류:', error);
       setError('클래스 데이터를 불러오는 중 오류가 발생했습니다.');
@@ -303,21 +305,35 @@ const ClassEdit: React.FC = () => {
     }));
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      Array.from(files).forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const result = event.target?.result as string;
+      for (const file of Array.from(files)) {
+        try {
+          // Check if adding this image would exceed the limit of 10 images
+          if (formData.images.length >= 10) {
+            setError('최대 10장의 이미지만 업로드할 수 있습니다.');
+            break;
+          }
+
+          if (!validateImageSize(file)) {
+            setError('이미지 파일 크기는 10MB 이하여야 합니다.');
+            continue;
+          }
+
+          const compressedImage = await compressImage(file);
           setFormData(prev => ({
             ...prev, 
-            images: [...prev.images, result]
+            images: [...prev.images, compressedImage]
           }));
-        };
-        reader.readAsDataURL(file);
-      });
+        } catch (error) {
+          console.error('Error compressing image:', error);
+          setError('이미지 압축 중 오류가 발생했습니다.');
+        }
+      }
     }
+    // Reset file input
+    e.target.value = '';
   };
 
   const removeImage = (index: number) => {
@@ -371,29 +387,24 @@ const ClassEdit: React.FC = () => {
       return;
     }
 
-    try {
-      // 업데이트된 클래스 정보
-      const updatedClass: Class = {
-        ...currentClass,
-        title: formData.title.trim(),
-        description: formData.description.trim(),
-        detailedDescription: formData.detailedDescription.trim(),
-        instructor: formData.instructor.trim(),
-        date: new Date(`${formData.date}T${formData.time}`),
-        duration: duration,
-        maxParticipants: maxParticipants,
-        location: formData.location.trim(),
-        googleFormUrl: formData.googleFormUrl.trim(),
-        images: formData.images
-      };
+    // 업데이트된 클래스 정보
+    const updatedClass: Class = {
+      ...currentClass,
+      title: formData.title.trim(),
+      description: formData.description.trim(),
+      detailedDescription: formData.detailedDescription.trim(),
+      instructor: formData.instructor.trim(),
+      date: new Date(`${formData.date}T${formData.time}`),
+      duration: duration,
+      maxParticipants: maxParticipants,
+      location: formData.location.trim(),
+      googleFormUrl: formData.googleFormUrl.trim(),
+      images: formData.images
+    };
 
-      await updateClass(id!, updatedClass);
-      alert('클래스 정보가 수정되었습니다.');
-      navigate('/registration');
-    } catch (error) {
-      console.error('클래스 수정 오류:', error);
-      setError('클래스 수정 중 오류가 발생했습니다. 다시 시도해주세요.');
-    }
+    updateClass(id!, updatedClass);
+    alert('클래스 정보가 수정되었습니다.');
+    navigate('/registration');
   };
 
   const classToEdit = classes.find(cls => cls.id === id);
@@ -574,9 +585,11 @@ const ClassEdit: React.FC = () => {
                   </RemoveImageButton>
                 </PreviewImage>
               ))}
-              <AddImagePlaceholder onClick={() => document.getElementById('imageUpload')?.click()}>
-                +
-              </AddImagePlaceholder>
+              {formData.images.length < 10 && (
+                <AddImagePlaceholder onClick={() => document.getElementById('imageUpload')?.click()}>
+                  +
+                </AddImagePlaceholder>
+              )}
             </ImagePreview>
             <FileInput
               id="imageUpload"
@@ -586,7 +599,7 @@ const ClassEdit: React.FC = () => {
               onChange={handleImageChange}
             />
             <small style={{ color: '#666', marginTop: '0.5rem' }}>
-              클래스와 관련된 사진을 업로드하면 클래스 상세 페이지에 표시됩니다.
+              클래스와 관련된 사진을 최대 10장까지 업로드할 수 있습니다. ({formData.images.length}/10)
             </small>
           </FormGroup>
 

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
+import { compressImage, validateImageSize } from '../utils/imageCompression';
 import type { Instructor } from '../types';
 
 const Container = styled.div`
@@ -248,6 +249,7 @@ const InstructorEdit: React.FC = () => {
       experience: instructorToEdit.experience,
       detailedDescription: instructorToEdit.detailedDescription || ''
     });
+    
   }, [id, instructors, isAdmin, navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -258,21 +260,35 @@ const InstructorEdit: React.FC = () => {
     }));
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      Array.from(files).forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const result = event.target?.result as string;
+      for (const file of Array.from(files)) {
+        try {
+          // Check if adding this image would exceed the limit of 10 images
+          if (formData.images.length >= 10) {
+            setError('최대 10장의 이미지만 업로드할 수 있습니다.');
+            break;
+          }
+
+          if (!validateImageSize(file)) {
+            setError('이미지 파일 크기는 10MB 이하여야 합니다.');
+            continue;
+          }
+
+          const compressedImage = await compressImage(file);
           setFormData(prev => ({
             ...prev, 
-            images: [...prev.images, result]
+            images: [...prev.images, compressedImage]
           }));
-        };
-        reader.readAsDataURL(file);
-      });
+        } catch (error) {
+          console.error('Error compressing image:', error);
+          setError('이미지 압축 중 오류가 발생했습니다.');
+        }
+      }
     }
+    // Reset file input
+    e.target.value = '';
   };
 
   const removeImage = (index: number) => {
@@ -282,7 +298,7 @@ const InstructorEdit: React.FC = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -290,7 +306,6 @@ const InstructorEdit: React.FC = () => {
       setError('강사명을 입력해주세요.');
       return;
     }
-
 
     if (!formData.bio.trim()) {
       setError('소개를 입력해주세요.');
@@ -399,9 +414,11 @@ const InstructorEdit: React.FC = () => {
                   </RemoveImageButton>
                 </PreviewImage>
               ))}
-              <AddImagePlaceholder onClick={() => document.getElementById('imageUpload')?.click()}>
-                +
-              </AddImagePlaceholder>
+              {formData.images.length < 10 && (
+                <AddImagePlaceholder onClick={() => document.getElementById('imageUpload')?.click()}>
+                  +
+                </AddImagePlaceholder>
+              )}
             </ImagePreview>
             <FileInput
               id="imageUpload"
@@ -410,6 +427,9 @@ const InstructorEdit: React.FC = () => {
               multiple
               onChange={handleImageChange}
             />
+            <small style={{ color: '#666', marginTop: '0.5rem' }}>
+              강사 프로필 사진을 최대 10장까지 업로드할 수 있습니다. ({formData.images.length}/10)
+            </small>
           </FormGroup>
 
           <FormGroup>

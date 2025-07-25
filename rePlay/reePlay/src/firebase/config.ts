@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, enableNetwork, disableNetwork } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "demo-key",
@@ -36,6 +37,9 @@ try {
   });
   db = getFirestore(app);
 }
+
+// Firebase Storage 인스턴스
+export const storage = getStorage(app);
 
 export { db, enableNetwork, disableNetwork };
 export default app;

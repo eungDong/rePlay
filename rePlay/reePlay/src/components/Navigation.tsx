@@ -9,6 +9,14 @@ const Nav = styled.nav`
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   position: relative;
   z-index: 1000;
+  
+  @media (max-width: 768px) {
+    padding: 1rem 0.5rem;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 1rem 0.2rem;
+  }
 `;
 
 const NavContainer = styled.div`
@@ -28,18 +36,43 @@ const Logo = styled(Link)`
   display: flex;
   align-items: center;
   gap: 0;
+  position: relative;
   
   &:hover {
     color: #3498db;
   }
+  
+  @media (max-width: 768px) {
+    margin-left: 60px;
+  }
+  
+  @media (max-width: 480px) {
+    margin-left: 50px;
+  }
 `;
 
 const LogoImage = styled.img`
-  width: 64px;
-  height: 64px;
+  width: 125px;
+  height: 125px;
   object-fit: contain;
-  margin-left: 0rem;
   margin-top: 15px;
+  margin-right: -25px;
+  
+  @media (max-width: 768px) {
+    width: 80px;
+    height: 80px;
+    position: absolute;
+    left: -70px;
+    margin-right: 0;
+  }
+  
+  @media (max-width: 480px) {
+    width: 70px;
+    height: 70px;
+    position: absolute;
+    left: -60px;
+    margin-right: 0;
+  }
 `;
 
 const NavLinks = styled.div<{ isOpen: boolean }>`
@@ -137,6 +170,11 @@ const MenuToggle = styled.button`
   
   @media (max-width: 768px) {
     display: block;
+    margin-right: 1rem;
+  }
+  
+  @media (max-width: 480px) {
+    margin-right: 1.5rem;
   }
 `;
 
@@ -159,8 +197,8 @@ const Navigation: React.FC = () => {
     <Nav>
       <NavContainer>
         <Logo to="/">
-          <LogoImage src={`${import.meta.env.BASE_URL}리플레이 로고.png`} alt="리플레이 로고" />
-          re: Play
+          <LogoImage src={`${import.meta.env.BASE_URL}리플레이 로고.png`} alt="re: Play Logo" />
+        re: Play
         </Logo>
         
         <MenuToggle onClick={() => setIsMenuOpen(!isMenuOpen)}>
