@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { uploadMultipleImages } from '../firebase/services';
+import { compressImage, validateImageSize } from '../utils/imageCompression';
 import type { Class } from '../types';
 
 const Container = styled.div`
@@ -247,8 +247,6 @@ const ClassEdit: React.FC = () => {
   });
 
   const [error, setError] = useState('');
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [previewImages, setPreviewImages] = useState<string[]>([]);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -293,9 +291,6 @@ const ClassEdit: React.FC = () => {
         images: classToEdit.images || []
       });
 
-      // Set existing images as previews
-      setPreviewImages(classToEdit.images || []);
-      setImageFiles([]);
     } catch (error) {
       console.error('클래스 데이터 초기화 오류:', error);
       setError('클래스 데이터를 불러오는 중 오류가 발생했습니다.');
@@ -310,64 +305,42 @@ const ClassEdit: React.FC = () => {
     }));
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      const newFiles: File[] = [];
-      const newPreviews: string[] = [];
-      
       for (const file of Array.from(files)) {
-        // Check if adding this image would exceed the limit of 5 images
-        if (previewImages.length + newFiles.length >= 5) {
-          setError('최대 5장의 이미지만 업로드할 수 있습니다.');
-          break;
-        }
-
-        // File size check (10MB limit)
-        if (file.size > 10 * 1024 * 1024) {
-          setError('이미지 파일 크기는 10MB 이하여야 합니다.');
-          continue;
-        }
-
-        newFiles.push(file);
-        
-        // Create preview URL
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const result = event.target?.result as string;
-          newPreviews.push(result);
-          
-          // Update previews when all files are read
-          if (newPreviews.length === newFiles.length) {
-            setPreviewImages(prev => [...prev, ...newPreviews]);
+        try {
+          // Check if adding this image would exceed the limit of 5 images
+          if (formData.images.length >= 5) {
+            setError('최대 5장의 이미지만 업로드할 수 있습니다.');
+            break;
           }
-        };
-        reader.readAsDataURL(file);
+
+          if (!validateImageSize(file)) {
+            setError('이미지 파일 크기는 10MB 이하여야 합니다.');
+            continue;
+          }
+
+          const compressedImage = await compressImage(file);
+          setFormData(prev => ({
+            ...prev, 
+            images: [...prev.images, compressedImage]
+          }));
+        } catch (error) {
+          console.error('Error compressing image:', error);
+          setError('이미지 압축 중 오류가 발생했습니다.');
+        }
       }
-      
-      setImageFiles(prev => [...prev, ...newFiles]);
     }
     // Reset file input
     e.target.value = '';
   };
 
   const removeImage = (index: number) => {
-    // Check if this is an existing image or a new file
-    const existingImagesCount = formData.images.length;
-    
-    if (index < existingImagesCount) {
-      // Removing existing image
-      setFormData(prev => ({
-        ...prev,
-        images: prev.images.filter((_, i) => i !== index)
-      }));
-    } else {
-      // Removing new file
-      const newFileIndex = index - existingImagesCount;
-      setImageFiles(prev => prev.filter((_, i) => i !== newFileIndex));
-    }
-    
-    setPreviewImages(prev => prev.filter((_, i) => i !== index));
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -414,38 +387,24 @@ const ClassEdit: React.FC = () => {
       return;
     }
 
-    try {
-      // Upload new images to Firebase Storage
-      let newImageUrls: string[] = [];
-      if (imageFiles.length > 0) {
-        newImageUrls = await uploadMultipleImages(imageFiles, 'classes');
-      }
+    // 업데이트된 클래스 정보
+    const updatedClass: Class = {
+      ...currentClass,
+      title: formData.title.trim(),
+      description: formData.description.trim(),
+      detailedDescription: formData.detailedDescription.trim(),
+      instructor: formData.instructor.trim(),
+      date: new Date(`${formData.date}T${formData.time}`),
+      duration: duration,
+      maxParticipants: maxParticipants,
+      location: formData.location.trim(),
+      googleFormUrl: formData.googleFormUrl.trim(),
+      images: formData.images
+    };
 
-      // Combine existing images with new uploaded images
-      const allImageUrls = [...formData.images, ...newImageUrls];
-
-      // 업데이트된 클래스 정보
-      const updatedClass: Class = {
-        ...currentClass,
-        title: formData.title.trim(),
-        description: formData.description.trim(),
-        detailedDescription: formData.detailedDescription.trim(),
-        instructor: formData.instructor.trim(),
-        date: new Date(`${formData.date}T${formData.time}`),
-        duration: duration,
-        maxParticipants: maxParticipants,
-        location: formData.location.trim(),
-        googleFormUrl: formData.googleFormUrl.trim(),
-        images: allImageUrls
-      };
-
-      await updateClass(id!, updatedClass);
-      alert('클래스 정보가 수정되었습니다.');
-      navigate('/registration');
-    } catch (error) {
-      console.error('클래스 수정 오류:', error);
-      setError('클래스 수정 중 오류가 발생했습니다. 다시 시도해주세요.');
-    }
+    updateClass(id!, updatedClass);
+    alert('클래스 정보가 수정되었습니다.');
+    navigate('/registration');
   };
 
   const classToEdit = classes.find(cls => cls.id === id);
@@ -640,7 +599,7 @@ const ClassEdit: React.FC = () => {
               onChange={handleImageChange}
             />
             <small style={{ color: '#666', marginTop: '0.5rem' }}>
-              클래스와 관련된 사진을 최대 5장까지 업로드할 수 있습니다. ({previewImages.length}/5)
+              클래스와 관련된 사진을 최대 5장까지 업로드할 수 있습니다. ({formData.images.length}/5)
             </small>
           </FormGroup>
 
