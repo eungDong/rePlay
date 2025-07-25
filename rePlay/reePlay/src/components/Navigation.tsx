@@ -197,8 +197,8 @@ const Navigation: React.FC = () => {
     <Nav>
       <NavContainer>
         <Logo to="/">
-          <LogoImage src={`${import.meta.env.BASE_URL}리플레이 로고.png`} alt="re: Play Logo" />
-        re: Play
+          <LogoImage src={`${import.meta.env.BASE_URL}리플레이 로고.png`} alt="Re:play Logo" />
+        Re:play
         </Logo>
         
         <MenuToggle onClick={() => setIsMenuOpen(!isMenuOpen)}>
