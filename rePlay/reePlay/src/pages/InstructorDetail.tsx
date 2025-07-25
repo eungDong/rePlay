@@ -123,6 +123,14 @@ const ImageSliderContainer = styled.div`
   margin: 0 auto 2rem;
 `;
 
+const ImageClickHint = styled.div`
+  text-align: center;
+  color: #666;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+  font-style: italic;
+`;
+
 const ImageSlider = styled.div`
   aspect-ratio: 4/3;
   background: linear-gradient(45deg, #3498db, #2980b9);
@@ -483,6 +491,7 @@ const InstructorDetail: React.FC = () => {
               )}
             </ImageSlider>
           </ImageSliderContainer>
+          <ImageClickHint>이미지를 클릭해 더 큰 화면으로 보세요</ImageClickHint>
         </ContentSection>
       )}
 
