@@ -16,6 +16,7 @@ import {
   deleteObject 
 } from 'firebase/storage';
 import { db, storage } from './config';
+import type { Firestore } from 'firebase/firestore';
 import type { Organization, Instructor, Class } from '../types';
 
 // 이미지 업로드 함수

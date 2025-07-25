@@ -2,15 +2,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { Instructor, Class, Organization } from '../types';
 
-// 로컬 개발용 더미 데이터
-const dummyOrganization: Organization = {
-  id: '1',
-  name: 're: Play',
-  description: '전문 피트니스 아카데미',
-  address: '서울시 강남구',
-  phone: '02-1234-5678',
-  email: 'info@replay.com'
-};
 
 // Firebase 서비스를 동적으로 import하여 에러 방지
 let firebaseServices: any = null;
@@ -79,7 +70,7 @@ const defaultOrganization: Organization = {
 };
 
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
-  const [organization, setOrganization] = useState<Organization>(dummyOrganization);
+  const [organization, setOrganization] = useState<Organization>(defaultOrganization);
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [isLoading, setIsLoading] = useState(true);

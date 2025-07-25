@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, enableNetwork, disableNetwork } from 'firebase/firestore';
+import { getFirestore, enableNetwork, disableNetwork, type Firestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
@@ -12,8 +12,8 @@ const firebaseConfig = {
 };
 
 // Firebase 앱 초기화
-let app;
-let db;
+let app: any;
+let db: Firestore;
 
 try {
   app = initializeApp(firebaseConfig);
