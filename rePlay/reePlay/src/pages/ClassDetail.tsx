@@ -623,7 +623,7 @@ const ClassDetail: React.FC = () => {
               )}
             </ImageSlider>
           </ImageSliderContainer>
-          <ImageClickHint>이미지를 클릭해 더 큰 화면으로 보세요</ImageClickHint>
+          <ImageClickHint>이미지를 클릭하여 더 큰 화면으로 볼 수 있습니다. </ImageClickHint>
         </ContentSection>
       )}
 
